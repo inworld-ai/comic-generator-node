@@ -6,7 +6,7 @@ This app demonstrates four-panel-comic generation using the Inworld Runtime and 
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v20 or higher)
 - npm
 - An Inworld AI account and API key
 - A Minimax API key
