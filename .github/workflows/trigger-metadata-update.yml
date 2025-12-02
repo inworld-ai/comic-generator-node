@@ -1,0 +1,57 @@
+name: Trigger Metadata Update
+
+on:
+  # Run when PRs are merged into main
+  push:
+    branches:
+      - main
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  trigger-metadata-build:
+    runs-on: [self-hosted, kubernetes, ephemeral]
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: "google-github-actions/auth@v2"
+        env:
+          WORKLOAD_IDENTITY_PROVIDER: "projects/773342050638/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          SERVICE_ACCOUNT: "inworld-approval-bot@inworld-ai-github.iam.gserviceaccount.com"
+        with:
+          workload_identity_provider: "${{ env.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ env.SERVICE_ACCOUNT }}"
+
+      - name: Fetch GitHub App secrets
+        id: secrets
+        uses: "google-github-actions/get-secretmanager-secrets@v2"
+        with:
+          secrets: |-
+            APP_ID:inworld-ai-github/github-inworld-approval-bot-create-pr-app-id
+            PRIVATE_KEY:inworld-ai-github/github-inworld-approval-bot-create-pr-app-key
+
+      - name: Get GitHub App token
+        id: github-app-token
+        uses: getsentry/action-github-app-token@v3
+        with:
+          app_id: ${{ steps.secrets.outputs.APP_ID }}
+          private_key: ${{ steps.secrets.outputs.PRIVATE_KEY }}
+
+      - name: Trigger metadata rebuild
+        env:
+          GH_APP_TOKEN: ${{ steps.github-app-token.outputs.token }}
+          CONTENT_MANAGEMENT_REPO: inworld-ai/templates-content-management
+        run: |
+          echo "$GH_APP_TOKEN" | gh auth login --with-token
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ env.CONTENT_MANAGEMENT_REPO }}/dispatches \
+            -f "event_type=template-updated" \
+            -F "client_payload[template_repo]=${{ env.CONTENT_MANAGEMENT_REPO }}" \
+            -F "client_payload[pr_number]=${{ github.event.pull_request.number }}" \
+            -F "client_payload[pr_action]=${{ github.event.action }}" \
+            -F "client_payload[ref]=${{ github.ref }}" \
+            -F "client_payload[sha]=${{ github.sha }}"
