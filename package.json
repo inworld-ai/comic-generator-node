@@ -23,7 +23,7 @@
   "author": "Inworld AI",
   "dependencies": {
     "@inworld/runtime": "^0.8.0",
-    "axios": "^1.12.0",
+    "axios": "^1.13.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.2.0",
